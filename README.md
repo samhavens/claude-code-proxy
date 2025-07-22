@@ -99,6 +99,51 @@ uv run uvicorn server:app --host 0.0.0.0 --port 8082 --reload
 
 3. **That's it!** Your Claude Code client will now use the configured backend models (defaulting to Gemini) through the proxy. 🎯
 
+### Quick Start Aliases 🚀
+
+For even faster access, add these aliases to your shell config (`.bashrc`, `.zshrc`, etc.):
+
+#### Method 1: Simple Aliases (Fixed Delay)
+```bash
+# Add to your ~/.zshrc or ~/.bashrc
+alias oai-claude='(PREFERRED_PROVIDER=openai anthropic-proxy &) && sleep 2 && ANTHROPIC_BASE_URL=http://localhost:8082 claude'
+alias gemini-claude='(PREFERRED_PROVIDER=google anthropic-proxy &) && sleep 2 && ANTHROPIC_BASE_URL=http://localhost:8082 claude'
+```
+
+#### Method 2: Smart Aliases (Waits for Server)
+```bash
+# Add to your ~/.zshrc or ~/.bashrc
+alias oai-claude='start-claude --provider openai'
+alias gemini-claude='start-claude --provider google'
+alias custom-claude='start-claude --provider openai --big-model gpt-4o --small-model gpt-4o-mini'
+```
+
+#### Method 3: Direct Commands
+```bash
+# Start with OpenAI backend (waits for server to be ready)
+start-claude --provider openai
+
+# Start with Gemini backend
+start-claude --provider google
+
+# Start with custom models
+start-claude --provider openai --big-model gpt-4o --small-model gpt-4o-mini
+
+# See all options
+start-claude --help
+```
+
+**Usage:**
+```bash
+# Any of these work:
+oai-claude
+gemini-claude
+custom-claude
+start-claude --provider openai
+```
+
+**Note:** Method 2 and 3 use the `start-claude` command which waits for the server to be ready before launching Claude, making it more reliable than fixed delays.
+
 ## Model Mapping 🗺️
 
 The proxy automatically maps Claude models to either OpenAI or Gemini models based on the configured model:

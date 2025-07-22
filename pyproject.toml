@@ -19,6 +19,7 @@ dependencies = [
 [project.scripts]
 anthropic-proxy = "anthropic_proxy.cli:main"
 claude-proxy = "anthropic_proxy.cli:main"
+start-claude = "anthropic_proxy.start_claude:main"
 
 [build-system]
 requires = ["hatchling"]
