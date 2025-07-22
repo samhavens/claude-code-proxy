@@ -122,106 +122,6 @@ GEMINI_MODELS = [
     "gemini-2.0-flash"
 ]
 
-# Message history logging functions
-def log_message_history(request_id: str, stage: str, data: Any, truncate: bool = True):
-    """Log message history for debugging and monitoring."""
-    if not LOG_MESSAGE_HISTORY:
-        return
-    
-    try:
-        if isinstance(data, dict):
-            # Create a copy to avoid modifying the original
-            log_data = data.copy()
-            
-            # Truncate long content for readability
-            if truncate:
-                if 'messages' in log_data:
-                    for msg in log_data['messages']:
-                        if isinstance(msg, dict) and 'content' in msg:
-                            content = msg['content']
-                            if isinstance(content, str) and len(content) > 500:
-                                msg['content'] = content[:500] + "... [truncated]"
-                            elif isinstance(content, list):
-                                for block in content:
-                                    if isinstance(block, dict) and 'text' in block:
-                                        if len(block['text']) > 500:
-                                            block['text'] = block['text'][:500] + "... [truncated]"
-                
-                if 'content' in log_data:
-                    content = log_data['content']
-                    if isinstance(content, list):
-                        for block in content:
-                            if isinstance(block, dict) and 'text' in block:
-                                if len(block['text']) > 500:
-                                    block['text'] = block['text'][:500] + "... [truncated]"
-            
-            logger.info(f"📝 [{request_id}] {stage}: {json.dumps(log_data, indent=2, ensure_ascii=False)}")
-        else:
-            logger.info(f"📝 [{request_id}] {stage}: {str(data)}")
-    except Exception as e:
-        logger.warning(f"Failed to log message history for {stage}: {e}")
-
-def log_request_summary(request_id: str, original_request: MessagesRequest, litellm_request: Dict[str, Any]):
-    """Log a summary of the request conversion."""
-    if not LOG_MESSAGE_HISTORY:
-        return
-    
-    try:
-        summary = {
-            "request_id": request_id,
-            "original_model": original_request.original_model or original_request.model,
-            "target_model": litellm_request.get("model"),
-            "num_messages": len(litellm_request.get("messages", [])),
-            "has_system": any(msg.get("role") == "system" for msg in litellm_request.get("messages", [])),
-            "has_tools": bool(litellm_request.get("tools")),
-            "stream": litellm_request.get("stream", False),
-            "max_tokens": litellm_request.get("max_tokens"),
-            "temperature": litellm_request.get("temperature")
-        }
-        logger.info(f"📊 [{request_id}] Request Summary: {json.dumps(summary, indent=2)}")
-    except Exception as e:
-        logger.warning(f"Failed to log request summary: {e}")
-
-def log_response_summary(request_id: str, response: Any, original_request: MessagesRequest):
-    """Log a summary of the response."""
-    if not LOG_MESSAGE_HISTORY:
-        return
-    
-    try:
-        # Extract response data
-        if hasattr(response, 'choices') and hasattr(response, 'usage'):
-            choices = response.choices
-            message = choices[0].message if choices and len(choices) > 0 else None
-            content_text = message.content if message and hasattr(message, 'content') else ""
-            tool_calls = message.tool_calls if message and hasattr(message, 'tool_calls') else None
-            finish_reason = choices[0].finish_reason if choices and len(choices) > 0 else "stop"
-            usage_info = response.usage
-        else:
-            # Handle dict responses
-            response_dict = response if isinstance(response, dict) else response.dict()
-            choices = response_dict.get("choices", [{}])
-            message = choices[0].get("message", {}) if choices and len(choices) > 0 else {}
-            content_text = message.get("content", "")
-            tool_calls = message.get("tool_calls", None)
-            finish_reason = choices[0].get("finish_reason", "stop") if choices and len(choices) > 0 else "stop"
-            usage_info = response_dict.get("usage", {})
-        
-        summary = {
-            "request_id": request_id,
-            "content_length": len(content_text) if content_text else 0,
-            "has_tool_calls": bool(tool_calls),
-            "num_tool_calls": len(tool_calls) if tool_calls else 0,
-            "finish_reason": finish_reason,
-            "usage": {
-                "prompt_tokens": getattr(usage_info, 'prompt_tokens', usage_info.get('prompt_tokens', 0)),
-                "completion_tokens": getattr(usage_info, 'completion_tokens', usage_info.get('completion_tokens', 0)),
-                "total_tokens": getattr(usage_info, 'total_tokens', usage_info.get('total_tokens', 0))
-            }
-        }
-        logger.info(f"📊 [{request_id}] Response Summary: {json.dumps(summary, indent=2)}")
-    except Exception as e:
-        logger.warning(f"Failed to log response summary: {e}")
-
 # Helper function to clean schema for Gemini
 def clean_gemini_schema(schema: Any) -> Any:
     """Recursively removes unsupported fields from a JSON schema for Gemini."""
@@ -455,6 +355,106 @@ class MessagesResponse(BaseModel):
     stop_reason: Optional[Literal["end_turn", "max_tokens", "stop_sequence", "tool_use"]] = None
     stop_sequence: Optional[str] = None
     usage: Usage
+
+# Message history logging functions (moved here after class definitions)
+def log_message_history(request_id: str, stage: str, data: Any, truncate: bool = True):
+    """Log message history for debugging and monitoring."""
+    if not LOG_MESSAGE_HISTORY:
+        return
+    
+    try:
+        if isinstance(data, dict):
+            # Create a copy to avoid modifying the original
+            log_data = data.copy()
+            
+            # Truncate long content for readability
+            if truncate:
+                if 'messages' in log_data:
+                    for msg in log_data['messages']:
+                        if isinstance(msg, dict) and 'content' in msg:
+                            content = msg['content']
+                            if isinstance(content, str) and len(content) > 500:
+                                msg['content'] = content[:500] + "... [truncated]"
+                            elif isinstance(content, list):
+                                for block in content:
+                                    if isinstance(block, dict) and 'text' in block:
+                                        if len(block['text']) > 500:
+                                            block['text'] = block['text'][:500] + "... [truncated]"
+                
+                if 'content' in log_data:
+                    content = log_data['content']
+                    if isinstance(content, list):
+                        for block in content:
+                            if isinstance(block, dict) and 'text' in block:
+                                if len(block['text']) > 500:
+                                    block['text'] = block['text'][:500] + "... [truncated]"
+            
+            logger.info(f"📝 [{request_id}] {stage}: {json.dumps(log_data, indent=2, ensure_ascii=False)}")
+        else:
+            logger.info(f"📝 [{request_id}] {stage}: {str(data)}")
+    except Exception as e:
+        logger.warning(f"Failed to log message history for {stage}: {e}")
+
+def log_request_summary(request_id: str, original_request: MessagesRequest, litellm_request: Dict[str, Any]):
+    """Log a summary of the request conversion."""
+    if not LOG_MESSAGE_HISTORY:
+        return
+    
+    try:
+        summary = {
+            "request_id": request_id,
+            "original_model": original_request.original_model or original_request.model,
+            "target_model": litellm_request.get("model"),
+            "num_messages": len(litellm_request.get("messages", [])),
+            "has_system": any(msg.get("role") == "system" for msg in litellm_request.get("messages", [])),
+            "has_tools": bool(litellm_request.get("tools")),
+            "stream": litellm_request.get("stream", False),
+            "max_tokens": litellm_request.get("max_tokens"),
+            "temperature": litellm_request.get("temperature")
+        }
+        logger.info(f"📊 [{request_id}] Request Summary: {json.dumps(summary, indent=2)}")
+    except Exception as e:
+        logger.warning(f"Failed to log request summary: {e}")
+
+def log_response_summary(request_id: str, response: Any, original_request: MessagesRequest):
+    """Log a summary of the response."""
+    if not LOG_MESSAGE_HISTORY:
+        return
+    
+    try:
+        # Extract response data
+        if hasattr(response, 'choices') and hasattr(response, 'usage'):
+            choices = response.choices
+            message = choices[0].message if choices and len(choices) > 0 else None
+            content_text = message.content if message and hasattr(message, 'content') else ""
+            tool_calls = message.tool_calls if message and hasattr(message, 'tool_calls') else None
+            finish_reason = choices[0].finish_reason if choices and len(choices) > 0 else "stop"
+            usage_info = response.usage
+        else:
+            # Handle dict responses
+            response_dict = response if isinstance(response, dict) else response.dict()
+            choices = response_dict.get("choices", [{}])
+            message = choices[0].get("message", {}) if choices and len(choices) > 0 else {}
+            content_text = message.get("content", "")
+            tool_calls = message.get("tool_calls", None)
+            finish_reason = choices[0].get("finish_reason", "stop") if choices and len(choices) > 0 else "stop"
+            usage_info = response_dict.get("usage", {})
+        
+        summary = {
+            "request_id": request_id,
+            "content_length": len(content_text) if content_text else 0,
+            "has_tool_calls": bool(tool_calls),
+            "num_tool_calls": len(tool_calls) if tool_calls else 0,
+            "finish_reason": finish_reason,
+            "usage": {
+                "prompt_tokens": getattr(usage_info, 'prompt_tokens', usage_info.get('prompt_tokens', 0)),
+                "completion_tokens": getattr(usage_info, 'completion_tokens', usage_info.get('completion_tokens', 0)),
+                "total_tokens": getattr(usage_info, 'total_tokens', usage_info.get('total_tokens', 0))
+            }
+        }
+        logger.info(f"📊 [{request_id}] Response Summary: {json.dumps(summary, indent=2)}")
+    except Exception as e:
+        logger.warning(f"Failed to log response summary: {e}")
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
