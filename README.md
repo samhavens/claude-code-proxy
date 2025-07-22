@@ -80,6 +80,7 @@ The proxy automatically maps Claude models to either OpenAI or Gemini models bas
 
 #### OpenAI Models
 The following OpenAI models are supported with automatic `openai/` prefix handling:
+- o3
 - o3-mini
 - o1
 - o1-mini
