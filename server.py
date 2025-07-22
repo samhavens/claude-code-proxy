@@ -18,11 +18,7 @@ import sys
 # Load environment variables from .env file
 load_dotenv()
 
-# Configure logging
-logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL, logging.WARN),
-    format='%(asctime)s - %(levelname)s - %(message)s',
-)
+# Configure logging (will be set up after environment variables are loaded)
 logger = logging.getLogger(__name__)
 
 # Configure uvicorn to be quieter
@@ -88,6 +84,12 @@ DEFAULT_SYSTEM_MESSAGE = os.environ.get("DEFAULT_SYSTEM_MESSAGE", "")
 # Get logging configuration from environment
 LOG_MESSAGE_HISTORY = os.environ.get("LOG_MESSAGE_HISTORY", "false").lower() == "true"
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "WARN").upper()
+
+# Configure logging now that we have the LOG_LEVEL
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL, logging.WARN),
+    format='%(asctime)s - %(levelname)s - %(message)s',
+)
 
 # Get preferred provider (default to openai)
 PREFERRED_PROVIDER = os.environ.get("PREFERRED_PROVIDER", "openai").lower()
