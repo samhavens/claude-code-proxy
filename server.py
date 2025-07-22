@@ -435,7 +435,8 @@ def convert_anthropic_to_litellm(anthropic_request: MessagesRequest) -> Dict[str
     # Append default system message if configured
     if DEFAULT_SYSTEM_MESSAGE:
         if system_content:
-            system_content += "\n\n" + DEFAULT_SYSTEM_MESSAGE
+            # Ensure proper spacing between existing and default system message
+            system_content = system_content.rstrip() + "\n\n" + DEFAULT_SYSTEM_MESSAGE.lstrip()
         else:
             system_content = DEFAULT_SYSTEM_MESSAGE
     
@@ -930,6 +931,8 @@ async def handle_streaming(response_generator, original_request: MessagesRequest
                         accumulated_text += delta_content
 
                         # Always emit text deltas if no tool calls started
+                        # Note: Text content is passed through directly without modification
+                        # Any spacing issues (like missing spaces after periods) are from the source model
                         if tool_index is None and not text_block_closed:
                             text_sent = True
                             yield f"event: content_block_delta\ndata: {json.dumps({'type': 'content_block_delta', 'index': 0, 'delta': {'type': 'text_delta', 'text': delta_content}})}\n\n"

@@ -241,6 +241,18 @@ This proxy works by:
 
 The proxy handles both streaming and non-streaming responses, maintaining compatibility with all Claude clients. 🌊
 
+## Known Issues ⚠️
+
+### Text Spacing Issues
+If you notice missing spaces after periods or other spacing issues in the model's output (e.g., "yep—set" instead of "yep—set "), this is likely coming from the **source model's output itself**, not from the proxy processing. The proxy passes text content through directly without modification.
+
+This can happen with:
+- **OpenAI models** that have different text formatting than Claude
+- **Model-specific quirks** in how certain models handle punctuation and spacing
+- **Tokenization differences** between models
+
+**Workaround**: You can add a system message to instruct the model about proper spacing and formatting.
+
 ## Contributing 🤝
 
 Contributions are welcome! Please feel free to submit a Pull Request. 🎁
