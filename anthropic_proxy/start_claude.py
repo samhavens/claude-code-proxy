@@ -56,6 +56,10 @@ def main():
         help="Small model to use (e.g., gpt-4o-mini, gemini-2.0-flash)"
     )
     parser.add_argument(
+        "--system-message",
+        help="Default system message to append to all requests"
+    )
+    parser.add_argument(
         "--no-wait",
         action="store_true",
         help="Don't wait for server to be ready (use fixed delay)"
@@ -73,6 +77,9 @@ def main():
     
     if args.small_model:
         env_vars["SMALL_MODEL"] = args.small_model
+    
+    if args.system_message:
+        env_vars["DEFAULT_SYSTEM_MESSAGE"] = args.system_message
     
     # Check for required API keys
     if args.provider == "openai" and not os.environ.get("OPENAI_API_KEY"):

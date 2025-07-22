@@ -60,6 +60,7 @@ This gives you the `anthropic-proxy` and `claude-proxy` commands globally!
    *   `PREFERRED_PROVIDER` (Optional): Set to `openai` (default) or `google`. This determines the primary backend for mapping `haiku`/`sonnet`.
    *   `BIG_MODEL` (Optional): The model to map `sonnet` requests to. Defaults to `gpt-4.1` (if `PREFERRED_PROVIDER=openai`) or `gemini-2.5-pro-preview-03-25`.
    *   `SMALL_MODEL` (Optional): The model to map `haiku` requests to. Defaults to `gpt-4.1-mini` (if `PREFERRED_PROVIDER=openai`) or `gemini-2.0-flash`.
+   *   `DEFAULT_SYSTEM_MESSAGE` (Optional): A system message that will be appended to any existing system message. Useful for adding proxy-specific instructions or context.
 
    **Mapping Logic:**
    - If `PREFERRED_PROVIDER=openai` (default), `haiku`/`sonnet` map to `SMALL_MODEL`/`BIG_MODEL` prefixed with `openai/`.
@@ -128,6 +129,9 @@ start-claude --provider google
 
 # Start with custom models
 start-claude --provider openai --big-model gpt-4o --small-model gpt-4o-mini
+
+# Start with custom system message
+start-claude --provider openai --system-message "You are running through a proxy. Be aware you're using OpenAI models."
 
 # See all options
 start-claude --help
@@ -217,6 +221,12 @@ GEMINI_API_KEY="your-google-key"
 PREFERRED_PROVIDER="openai"
 BIG_MODEL="gpt-4o" # Example specific model
 SMALL_MODEL="gpt-4o-mini" # Example specific model
+```
+
+**Example 4: Add Default System Message**
+```dotenv
+OPENAI_API_KEY="your-openai-key"
+DEFAULT_SYSTEM_MESSAGE="You are running through a proxy that translates between Anthropic and OpenAI APIs. Please be aware that you're actually using OpenAI's models, not Claude."
 ```
 
 ## How It Works 🧩
