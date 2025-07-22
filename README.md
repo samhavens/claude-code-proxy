@@ -229,6 +229,27 @@ OPENAI_API_KEY="your-openai-key"
 DEFAULT_SYSTEM_MESSAGE="You are running through a proxy that translates between Anthropic and OpenAI APIs. Please be aware that you're actually using OpenAI's models, not Claude."
 ```
 
+**Example 5: Enable Message History Logging**
+```dotenv
+OPENAI_API_KEY="your-openai-key"
+LOG_MESSAGE_HISTORY="true"
+LOG_LEVEL="INFO"
+```
+
+## Environment Variables Reference 📋
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `ANTHROPIC_API_KEY` | Your Anthropic API key | Required |
+| `OPENAI_API_KEY` | Your OpenAI API key | Required |
+| `GEMINI_API_KEY` | Your Google Gemini API key | Required |
+| `PREFERRED_PROVIDER` | Preferred provider (openai, anthropic, gemini) | `openai` |
+| `BIG_MODEL` | Model to use for large requests | `gpt-4.1` |
+| `SMALL_MODEL` | Model to use for small requests | `gpt-4.1-mini` |
+| `DEFAULT_SYSTEM_MESSAGE` | Default system message to append to all requests | None |
+| `LOG_MESSAGE_HISTORY` | Enable full message history logging | `false` |
+| `LOG_LEVEL` | Logging level (DEBUG, INFO, WARN, ERROR) | `WARN` |
+
 ## How It Works 🧩
 
 This proxy works by:
@@ -252,6 +273,41 @@ This can happen with:
 - **Tokenization differences** between models
 
 **Workaround**: You can add a system message to instruct the model about proper spacing and formatting.
+
+## Message History Logging 📝
+
+The proxy includes comprehensive message history logging for debugging and monitoring:
+
+### Features
+- **Full Request/Response Logging**: Logs original requests, converted requests, and responses
+- **Request Summaries**: Provides concise summaries with key metrics
+- **Response Summaries**: Shows token usage, content length, and tool calls
+- **Truncation**: Automatically truncates long content for readability
+- **Request IDs**: Each request gets a unique ID for easy tracking
+
+### Enabling Logging
+Set these environment variables to enable logging:
+
+```bash
+LOG_MESSAGE_HISTORY="true"
+LOG_LEVEL="INFO"
+```
+
+### Log Output
+When enabled, you'll see logs like:
+```
+📝 [req_a1b2c3d4] Original Request: {"model": "claude-3.5-sonnet", "messages": [...]}
+📊 [req_a1b2c3d4] Request Summary: {"request_id": "req_a1b2c3d4", "original_model": "claude-3.5-sonnet", ...}
+📝 [req_a1b2c3d4] Converted Request: {"model": "openai/gpt-4.1", "messages": [...]}
+📊 [req_a1b2c3d4] Response Summary: {"content_length": 150, "has_tool_calls": false, ...}
+📝 [req_a1b2c3d4] Converted Response: {"id": "msg_...", "content": [...]}
+```
+
+### Use Cases
+- **Debugging**: Track request/response flow to identify issues
+- **Monitoring**: Monitor token usage and response patterns
+- **Development**: Understand how the proxy transforms requests
+- **Troubleshooting**: Identify model-specific issues or formatting problems
 
 ## Contributing 🤝
 

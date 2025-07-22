@@ -20,7 +20,7 @@ load_dotenv()
 
 # Configure logging
 logging.basicConfig(
-    level=logging.WARN,  # Change to INFO level to show more details
+    level=getattr(logging, LOG_LEVEL, logging.WARN),
     format='%(asctime)s - %(levelname)s - %(message)s',
 )
 logger = logging.getLogger(__name__)
@@ -85,6 +85,10 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 # Get default system message from environment
 DEFAULT_SYSTEM_MESSAGE = os.environ.get("DEFAULT_SYSTEM_MESSAGE", "")
 
+# Get logging configuration from environment
+LOG_MESSAGE_HISTORY = os.environ.get("LOG_MESSAGE_HISTORY", "false").lower() == "true"
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "WARN").upper()
+
 # Get preferred provider (default to openai)
 PREFERRED_PROVIDER = os.environ.get("PREFERRED_PROVIDER", "openai").lower()
 
@@ -115,6 +119,106 @@ GEMINI_MODELS = [
     "gemini-2.5-pro-preview-03-25",
     "gemini-2.0-flash"
 ]
+
+# Message history logging functions
+def log_message_history(request_id: str, stage: str, data: Any, truncate: bool = True):
+    """Log message history for debugging and monitoring."""
+    if not LOG_MESSAGE_HISTORY:
+        return
+    
+    try:
+        if isinstance(data, dict):
+            # Create a copy to avoid modifying the original
+            log_data = data.copy()
+            
+            # Truncate long content for readability
+            if truncate:
+                if 'messages' in log_data:
+                    for msg in log_data['messages']:
+                        if isinstance(msg, dict) and 'content' in msg:
+                            content = msg['content']
+                            if isinstance(content, str) and len(content) > 500:
+                                msg['content'] = content[:500] + "... [truncated]"
+                            elif isinstance(content, list):
+                                for block in content:
+                                    if isinstance(block, dict) and 'text' in block:
+                                        if len(block['text']) > 500:
+                                            block['text'] = block['text'][:500] + "... [truncated]"
+                
+                if 'content' in log_data:
+                    content = log_data['content']
+                    if isinstance(content, list):
+                        for block in content:
+                            if isinstance(block, dict) and 'text' in block:
+                                if len(block['text']) > 500:
+                                    block['text'] = block['text'][:500] + "... [truncated]"
+            
+            logger.info(f"📝 [{request_id}] {stage}: {json.dumps(log_data, indent=2, ensure_ascii=False)}")
+        else:
+            logger.info(f"📝 [{request_id}] {stage}: {str(data)}")
+    except Exception as e:
+        logger.warning(f"Failed to log message history for {stage}: {e}")
+
+def log_request_summary(request_id: str, original_request: MessagesRequest, litellm_request: Dict[str, Any]):
+    """Log a summary of the request conversion."""
+    if not LOG_MESSAGE_HISTORY:
+        return
+    
+    try:
+        summary = {
+            "request_id": request_id,
+            "original_model": original_request.original_model or original_request.model,
+            "target_model": litellm_request.get("model"),
+            "num_messages": len(litellm_request.get("messages", [])),
+            "has_system": any(msg.get("role") == "system" for msg in litellm_request.get("messages", [])),
+            "has_tools": bool(litellm_request.get("tools")),
+            "stream": litellm_request.get("stream", False),
+            "max_tokens": litellm_request.get("max_tokens"),
+            "temperature": litellm_request.get("temperature")
+        }
+        logger.info(f"📊 [{request_id}] Request Summary: {json.dumps(summary, indent=2)}")
+    except Exception as e:
+        logger.warning(f"Failed to log request summary: {e}")
+
+def log_response_summary(request_id: str, response: Any, original_request: MessagesRequest):
+    """Log a summary of the response."""
+    if not LOG_MESSAGE_HISTORY:
+        return
+    
+    try:
+        # Extract response data
+        if hasattr(response, 'choices') and hasattr(response, 'usage'):
+            choices = response.choices
+            message = choices[0].message if choices and len(choices) > 0 else None
+            content_text = message.content if message and hasattr(message, 'content') else ""
+            tool_calls = message.tool_calls if message and hasattr(message, 'tool_calls') else None
+            finish_reason = choices[0].finish_reason if choices and len(choices) > 0 else "stop"
+            usage_info = response.usage
+        else:
+            # Handle dict responses
+            response_dict = response if isinstance(response, dict) else response.dict()
+            choices = response_dict.get("choices", [{}])
+            message = choices[0].get("message", {}) if choices and len(choices) > 0 else {}
+            content_text = message.get("content", "")
+            tool_calls = message.get("tool_calls", None)
+            finish_reason = choices[0].get("finish_reason", "stop") if choices and len(choices) > 0 else "stop"
+            usage_info = response_dict.get("usage", {})
+        
+        summary = {
+            "request_id": request_id,
+            "content_length": len(content_text) if content_text else 0,
+            "has_tool_calls": bool(tool_calls),
+            "num_tool_calls": len(tool_calls) if tool_calls else 0,
+            "finish_reason": finish_reason,
+            "usage": {
+                "prompt_tokens": getattr(usage_info, 'prompt_tokens', usage_info.get('prompt_tokens', 0)),
+                "completion_tokens": getattr(usage_info, 'completion_tokens', usage_info.get('completion_tokens', 0)),
+                "total_tokens": getattr(usage_info, 'total_tokens', usage_info.get('total_tokens', 0))
+            }
+        }
+        logger.info(f"📊 [{request_id}] Response Summary: {json.dumps(summary, indent=2)}")
+    except Exception as e:
+        logger.warning(f"Failed to log response summary: {e}")
 
 # Helper function to clean schema for Gemini
 def clean_gemini_schema(schema: Any) -> Any:
@@ -851,6 +955,16 @@ def convert_litellm_to_anthropic(litellm_response: Union[Dict[str, Any], Any],
 async def handle_streaming(response_generator, original_request: MessagesRequest):
     """Handle streaming responses from LiteLLM and convert to Anthropic format."""
     try:
+        # Generate request ID for logging
+        request_id = f"stream_{uuid.uuid4().hex[:8]}"
+        
+        # Log streaming start
+        log_message_history(request_id, "Streaming Start", {
+            "model": original_request.model,
+            "stream": True,
+            "message_id": f"msg_{uuid.uuid4().hex[:24]}"
+        })
+        
         # Send message_start event
         message_id = f"msg_{uuid.uuid4().hex[:24]}"  # Format similar to Anthropic's IDs
 
@@ -1118,6 +1232,20 @@ async def create_message(
     raw_request: Request
 ):
     try:
+        # Generate request ID for logging
+        request_id = f"req_{uuid.uuid4().hex[:8]}"
+        
+        # Log original request
+        log_message_history(request_id, "Original Request", {
+            "model": request.model,
+            "max_tokens": request.max_tokens,
+            "messages": [{"role": msg.role, "content": msg.content} for msg in request.messages],
+            "system": request.system,
+            "tools": [{"name": tool.name, "description": tool.description} for tool in request.tools] if request.tools else None,
+            "stream": request.stream,
+            "temperature": request.temperature
+        })
+        
         # print the body here
         body = await raw_request.body()
 
@@ -1141,6 +1269,10 @@ async def create_message(
 
         # Convert Anthropic request to LiteLLM format
         litellm_request = convert_anthropic_to_litellm(request)
+        
+        # Log converted request
+        log_message_history(request_id, "Converted Request", litellm_request)
+        log_request_summary(request_id, request, litellm_request)
 
         # Determine which API key to use based on the model
         if request.model.startswith("openai/"):
@@ -1337,8 +1469,28 @@ async def create_message(
             litellm_response = litellm.completion(**litellm_request)
             logger.debug(f"✅ RESPONSE RECEIVED: Model={litellm_request.get('model')}, Time={time.time() - start_time:.2f}s")
 
+            # Log response
+            log_response_summary(request_id, litellm_response, request)
+            log_message_history(request_id, "Raw Response", {
+                "model": litellm_request.get('model'),
+                "response_time": f"{time.time() - start_time:.2f}s",
+                "response": litellm_response
+            })
+
             # Convert LiteLLM response to Anthropic format
             anthropic_response = convert_litellm_to_anthropic(litellm_response, request)
+            
+            # Log converted response
+            log_message_history(request_id, "Converted Response", {
+                "id": anthropic_response.id,
+                "model": anthropic_response.model,
+                "content": anthropic_response.content,
+                "stop_reason": anthropic_response.stop_reason,
+                "usage": {
+                    "input_tokens": anthropic_response.usage.input_tokens,
+                    "output_tokens": anthropic_response.usage.output_tokens
+                }
+            })
 
             return anthropic_response
 
