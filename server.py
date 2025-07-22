@@ -92,6 +92,7 @@ SMALL_MODEL = os.environ.get("SMALL_MODEL", "gpt-4.1-mini")
 
 # List of OpenAI models
 OPENAI_MODELS = [
+    "o3",
     "o3-mini",
     "o1",
     "o1-mini",
@@ -155,13 +156,18 @@ class ContentBlockToolResult(BaseModel):
     tool_use_id: str
     content: Union[str, List[Dict[str, Any]], Dict[str, Any], List[Any], Any]
 
+class ContentBlockThinking(BaseModel):
+    type: Literal["thinking"]
+    thinking: str
+    signature: Optional[str] = None
+
 class SystemContent(BaseModel):
     type: Literal["text"]
     text: str
 
 class Message(BaseModel):
     role: Literal["user", "assistant"] 
-    content: Union[str, List[Union[ContentBlockText, ContentBlockImage, ContentBlockToolUse, ContentBlockToolResult]]]
+    content: Union[str, List[Union[ContentBlockText, ContentBlockImage, ContentBlockToolUse, ContentBlockToolResult, ContentBlockThinking]]]
 
 class Tool(BaseModel):
     name: str
@@ -169,7 +175,9 @@ class Tool(BaseModel):
     input_schema: Dict[str, Any]
 
 class ThinkingConfig(BaseModel):
-    enabled: bool
+    enabled: bool = True
+    budget_tokens: Optional[int] = None
+    type: Optional[str] = None
 
 class MessagesRequest(BaseModel):
     model: str
@@ -505,6 +513,19 @@ def convert_anthropic_to_litellm(anthropic_request: MessagesRequest) -> Dict[str
                                 "name": block.name,
                                 "input": block.input
                             })
+                        elif block.type == "thinking":
+                            # Handle thinking blocks - convert to text for non-Anthropic models
+                            # or preserve structure for Anthropic models
+                            if anthropic_request.model.startswith("anthropic/"):
+                                processed_content.append({
+                                    "type": "thinking",
+                                    "thinking": block.thinking,
+                                    "signature": getattr(block, "signature", None)
+                                })
+                            else:
+                                # For non-Anthropic models, convert to text
+                                thinking_text = f"<think>{block.thinking}</think>"
+                                processed_content.append({"type": "text", "text": thinking_text})
                         elif block.type == "tool_result":
                             # Handle different formats of tool result content
                             processed_content_block = {
@@ -539,13 +560,17 @@ def convert_anthropic_to_litellm(anthropic_request: MessagesRequest) -> Dict[str
     
     # Create LiteLLM request dict
     litellm_request = {
-        "model": anthropic_request.model,  # t understands "anthropic/claude-x" format
+        "model": anthropic_request.model,  # it understands "anthropic/claude-x" format
         "messages": messages,
         "max_tokens": max_tokens,
         "temperature": anthropic_request.temperature,
         "stream": anthropic_request.stream,
     }
-    
+
+    # Only include thinking field for Anthropic models
+    if anthropic_request.thinking and anthropic_request.model.startswith("anthropic/"):
+        litellm_request["thinking"] = anthropic_request.thinking
+
     # Add optional parameters if present
     if anthropic_request.stop_sequences:
         litellm_request["stop"] = anthropic_request.stop_sequences
@@ -1218,6 +1243,11 @@ async def create_message(
                                     tool_id = block.get("id", "unknown")
                                     tool_input = json.dumps(block.get("input", {}))
                                     text_content += f"[Tool: {tool_name} (ID: {tool_id})]\nInput: {tool_input}\n\n"
+                                
+                                # Handle thinking content blocks
+                                elif block.get("type") == "thinking":
+                                    thinking_text = block.get("thinking", "")
+                                    text_content += f"[Thinking: {thinking_text}]\n"
                                 
                                 # Handle image content blocks
                                 elif block.get("type") == "image":
