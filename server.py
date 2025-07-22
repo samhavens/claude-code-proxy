@@ -78,8 +78,9 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-# Get default system message from environment
+# Get default system messages from environment
 DEFAULT_SYSTEM_MESSAGE = os.environ.get("DEFAULT_SYSTEM_MESSAGE", "")
+SMALL_SYSTEM_MESSAGE = os.environ.get("SMALL_SYSTEM_MESSAGE", "")
 
 # Get logging configuration from environment
 LOG_MESSAGE_HISTORY = os.environ.get("LOG_MESSAGE_HISTORY", "false").lower() == "true"
@@ -538,13 +539,31 @@ def convert_anthropic_to_litellm(anthropic_request: MessagesRequest) -> Dict[str
                 elif isinstance(block, dict) and block.get("type") == "text":
                     system_content += block.get("text", "") + "\n\n"
     
+    # Determine which default system message to use based on the model
+    default_system_message = ""
+    
+    # Get clean model name for comparison
+    clean_model = anthropic_request.model
+    if clean_model.startswith("anthropic/"):
+        clean_model = clean_model[len("anthropic/"):]
+    elif clean_model.startswith("openai/"):
+        clean_model = clean_model[len("openai/"):]
+    elif clean_model.startswith("gemini/"):
+        clean_model = clean_model[len("gemini/"):]
+    
+    # Use small system message for Haiku and other small models
+    if "haiku" in clean_model.lower() or "mini" in clean_model.lower():
+        default_system_message = SMALL_SYSTEM_MESSAGE
+    else:
+        default_system_message = DEFAULT_SYSTEM_MESSAGE
+    
     # Append default system message if configured
-    if DEFAULT_SYSTEM_MESSAGE:
+    if default_system_message:
         if system_content:
             # Ensure proper spacing between existing and default system message
-            system_content = system_content.rstrip() + "\n\n" + DEFAULT_SYSTEM_MESSAGE.lstrip()
+            system_content = system_content.rstrip() + "\n\n" + default_system_message.lstrip()
         else:
-            system_content = DEFAULT_SYSTEM_MESSAGE
+            system_content = default_system_message
     
     # Add system message if we have any content
     if system_content.strip():

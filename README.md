@@ -223,10 +223,11 @@ BIG_MODEL="gpt-4o" # Example specific model
 SMALL_MODEL="gpt-4o-mini" # Example specific model
 ```
 
-**Example 4: Add Default System Message**
+**Example 4: Add Default System Messages**
 ```dotenv
 OPENAI_API_KEY="your-openai-key"
 DEFAULT_SYSTEM_MESSAGE="You are running through a proxy that translates between Anthropic and OpenAI APIs. Please be aware that you're actually using OpenAI's models, not Claude."
+SMALL_SYSTEM_MESSAGE="You are a helpful assistant running through a proxy. Keep responses concise and focused."
 ```
 
 **Example 5: Enable Message History Logging**
@@ -235,6 +236,23 @@ OPENAI_API_KEY="your-openai-key"
 LOG_MESSAGE_HISTORY="true"
 LOG_LEVEL="INFO"
 ```
+
+### Model-Specific System Messages 🎯
+
+The proxy automatically selects the appropriate system message based on the model:
+
+- **Large Models** (Claude Sonnet, GPT-4, etc.): Use `DEFAULT_SYSTEM_MESSAGE`
+- **Small Models** (Claude Haiku, GPT-4o-mini, etc.): Use `SMALL_SYSTEM_MESSAGE`
+
+**Model Detection Logic:**
+- Models with "haiku" or "mini" in the name use `SMALL_SYSTEM_MESSAGE`
+- All other models use `DEFAULT_SYSTEM_MESSAGE`
+
+**Examples:**
+- `claude-3-5-sonnet` → Uses `DEFAULT_SYSTEM_MESSAGE`
+- `claude-3-5-haiku` → Uses `SMALL_SYSTEM_MESSAGE`
+- `gpt-4o` → Uses `DEFAULT_SYSTEM_MESSAGE`
+- `gpt-4o-mini` → Uses `SMALL_SYSTEM_MESSAGE`
 
 ## Environment Variables Reference 📋
 
@@ -246,7 +264,8 @@ LOG_LEVEL="INFO"
 | `PREFERRED_PROVIDER` | Preferred provider (openai, anthropic, gemini) | `openai` |
 | `BIG_MODEL` | Model to use for large requests | `gpt-4.1` |
 | `SMALL_MODEL` | Model to use for small requests | `gpt-4.1-mini` |
-| `DEFAULT_SYSTEM_MESSAGE` | Default system message to append to all requests | None |
+| `DEFAULT_SYSTEM_MESSAGE` | Default system message for large models (Claude Sonnet, GPT-4, etc.) | None |
+| `SMALL_SYSTEM_MESSAGE` | Default system message for small models (Claude Haiku, GPT-4o-mini, etc.) | None |
 | `LOG_MESSAGE_HISTORY` | Enable full message history logging | `false` |
 | `LOG_LEVEL` | Logging level (DEBUG, INFO, WARN, ERROR) | `WARN` |
 
