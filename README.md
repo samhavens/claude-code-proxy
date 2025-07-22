@@ -17,10 +17,28 @@ A proxy server that lets you use Anthropic clients with Gemini or OpenAI models 
 
 ### Setup 🛠️
 
+#### Option 1: Install as a Tool (Recommended) ⚡
+
+Install directly as a `uv` tool for easy command-line access:
+
+```bash
+# Install from GitHub
+uv tool install git+https://github.com/samhavens/claude-code-proxy.git
+
+# Or install from a local clone
+git clone https://github.com/samhavens/claude-code-proxy.git
+cd claude-code-proxy
+uv tool install .
+```
+
+This gives you the `anthropic-proxy` and `claude-proxy` commands globally!
+
+#### Option 2: Manual Setup 🔧
+
 1. **Clone this repository**:
    ```bash
-   git clone https://github.com/1rgs/claude-code-openai.git
-   cd claude-code-openai
+   git clone https://github.com/samhavens/claude-code-proxy.git
+   cd claude-code-proxy
    ```
 
 2. **Install uv** (if you haven't already):
@@ -47,11 +65,25 @@ A proxy server that lets you use Anthropic clients with Gemini or OpenAI models 
    - If `PREFERRED_PROVIDER=openai` (default), `haiku`/`sonnet` map to `SMALL_MODEL`/`BIG_MODEL` prefixed with `openai/`.
    - If `PREFERRED_PROVIDER=google`, `haiku`/`sonnet` map to `SMALL_MODEL`/`BIG_MODEL` prefixed with `gemini/` *if* those models are in the server's known `GEMINI_MODELS` list (otherwise falls back to OpenAI mapping).
 
-4. **Run the server**:
-   ```bash
-   uv run uvicorn server:app --host 0.0.0.0 --port 8082 --reload
-   ```
-   *(`--reload` is optional, for development)*
+#### Running the Server 🚀
+
+**If you installed as a tool:**
+```bash
+# Start the server with default settings
+anthropic-proxy
+
+# Or with custom options
+anthropic-proxy --port 8082 --reload
+
+# See all options
+anthropic-proxy --help
+```
+
+**If you're using manual setup:**
+```bash
+uv run uvicorn server:app --host 0.0.0.0 --port 8082 --reload
+```
+*(`--reload` is optional, for development)*
 
 ### Using with Claude Code 🎮
 

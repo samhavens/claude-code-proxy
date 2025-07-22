@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "Proxy that translates between Anthropic API and LiteLLM"
 readme = "README.md"
 requires-python = ">=3.10"
+authors = [
+    {name = "Sam Havens", email = "sam.havens@example.com"},
+]
 dependencies = [
     "fastapi[standard]>=0.115.11",
     "uvicorn>=0.34.0",
@@ -12,4 +15,12 @@ dependencies = [
     "litellm>=1.40.14",
     "python-dotenv>=1.0.0",
 ]
+
+[project.scripts]
+anthropic-proxy = "anthropic_proxy.cli:main"
+claude-proxy = "anthropic_proxy.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
