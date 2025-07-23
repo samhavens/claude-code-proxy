@@ -1294,7 +1294,7 @@ async def create_message(
             # Log system message if present
             if request.system:
                 if isinstance(request.system, str):
-                    print(f"  system: {request.system[:200]}{'...' if len(request.system) > 200 else ''}")
+                    print(f"  system: {request.system}")
                 elif isinstance(request.system, list):
                     # Handle system content blocks
                     system_text = ""
@@ -1303,14 +1303,14 @@ async def create_message(
                             system_text += block.text + " "
                         elif isinstance(block, dict) and block.get("type") == "text":
                             system_text += block.get("text", "") + " "
-                    print(f"  system: {system_text[:200]}{'...' if len(system_text) > 200 else ''}")
+                    print(f"  system: {system_text}")
             
             # Log conversation messages
             for i, msg in enumerate(request.messages):
                 role = msg.role
                 content = msg.content
                 if isinstance(content, str):
-                    print(f"  {i+1}. {role}: {content[:200]}{'...' if len(content) > 200 else ''}")
+                    print(f"  {i+1}. {role}: {content}")
                 elif isinstance(content, list):
                     # Handle content blocks
                     content_text = ""
@@ -1319,7 +1319,7 @@ async def create_message(
                             content_text += block.text + " "
                         elif isinstance(block, dict) and block.get("type") == "text":
                             content_text += block.get("text", "") + " "
-                    print(f"  {i+1}. {role}: {content_text[:200]}{'...' if len(content_text) > 200 else ''}")
+                    print(f"  {i+1}. {role}: {content_text}")
             print()
 
         logger.debug(f"📊 PROCESSING REQUEST: Model={request.model}, Stream={request.stream}")
@@ -1554,9 +1554,9 @@ async def create_message(
                 print(f"📝 SMALL MODEL RESPONSE ({clean_model}):")
                 for content_block in anthropic_response.content:
                     if hasattr(content_block, 'type') and content_block.type == "text":
-                        print(f"  assistant: {content_block.text[:200]}{'...' if len(content_block.text) > 200 else ''}")
+                        print(f"  assistant: {content_block.text}")
                     elif isinstance(content_block, dict) and content_block.get("type") == "text":
-                        print(f"  assistant: {content_block.get('text', '')[:200]}{'...' if len(content_block.get('text', '')) > 200 else ''}")
+                        print(f"  assistant: {content_block.get('text', '')}")
                     elif hasattr(content_block, 'type') and content_block.type == "tool_use":
                         print(f"  assistant: [Tool Use: {content_block.name}]")
                     elif isinstance(content_block, dict) and content_block.get("type") == "tool_use":
