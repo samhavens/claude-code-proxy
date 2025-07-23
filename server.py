@@ -1288,6 +1288,7 @@ async def create_message(
 
         # Check if this is a small model
         is_small_model = "haiku" in clean_model.lower() or "mini" in clean_model.lower()
+        print(f"DEBUG: Model {clean_model}, is_small_model = {is_small_model}")
         
         # Log role:content for small models
         if is_small_model:
@@ -1552,6 +1553,8 @@ async def create_message(
             })
 
             # Log response for small models
+            print(f"DEBUG: About to check small model response logging")
+            print(f"DEBUG: is_small_model = {is_small_model}")
             if is_small_model:
                 print(f"📝 SMALL MODEL RESPONSE ({clean_model}):")
                 print(f"  Response content type: {type(anthropic_response.content)}")
