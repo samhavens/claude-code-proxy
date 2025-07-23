@@ -1286,6 +1286,26 @@ async def create_message(
         elif clean_model.startswith("openai/"):
             clean_model = clean_model[len("openai/"):]
 
+        # Check if this is a small model and log role:content
+        is_small_model = "haiku" in clean_model.lower() or "mini" in clean_model.lower()
+        if is_small_model:
+            print(f"\n🔍 SMALL MODEL REQUEST ({clean_model}):")
+            for i, msg in enumerate(request.messages):
+                role = msg.role
+                content = msg.content
+                if isinstance(content, str):
+                    print(f"  {i+1}. {role}: {content[:200]}{'...' if len(content) > 200 else ''}")
+                elif isinstance(content, list):
+                    # Handle content blocks
+                    content_text = ""
+                    for block in content:
+                        if hasattr(block, 'type') and block.type == "text":
+                            content_text += block.text + " "
+                        elif isinstance(block, dict) and block.get("type") == "text":
+                            content_text += block.get("text", "") + " "
+                    print(f"  {i+1}. {role}: {content_text[:200]}{'...' if len(content_text) > 200 else ''}")
+            print()
+
         logger.debug(f"📊 PROCESSING REQUEST: Model={request.model}, Stream={request.stream}")
 
         # Convert Anthropic request to LiteLLM format
