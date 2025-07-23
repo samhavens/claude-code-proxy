@@ -1286,8 +1286,10 @@ async def create_message(
         elif clean_model.startswith("openai/"):
             clean_model = clean_model[len("openai/"):]
 
-        # Check if this is a small model and log role:content
+        # Check if this is a small model
         is_small_model = "haiku" in clean_model.lower() or "mini" in clean_model.lower()
+        
+        # Log role:content for small models
         if is_small_model:
             print(f"\n🔍 SMALL MODEL REQUEST ({clean_model}):")
             
@@ -1552,7 +1554,10 @@ async def create_message(
             # Log response for small models
             if is_small_model:
                 print(f"📝 SMALL MODEL RESPONSE ({clean_model}):")
-                for content_block in anthropic_response.content:
+                print(f"  Response content type: {type(anthropic_response.content)}")
+                print(f"  Response content length: {len(anthropic_response.content)}")
+                for i, content_block in enumerate(anthropic_response.content):
+                    print(f"  Content block {i}: {type(content_block)}")
                     if hasattr(content_block, 'type') and content_block.type == "text":
                         print(f"  assistant: {content_block.text}")
                     elif isinstance(content_block, dict) and content_block.get("type") == "text":
@@ -1561,6 +1566,8 @@ async def create_message(
                         print(f"  assistant: [Tool Use: {content_block.name}]")
                     elif isinstance(content_block, dict) and content_block.get("type") == "tool_use":
                         print(f"  assistant: [Tool Use: {content_block.get('name', 'unknown')}]")
+                    else:
+                        print(f"  assistant: [Unknown content type: {content_block}]")
                 print()
 
             return anthropic_response
