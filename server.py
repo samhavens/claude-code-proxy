@@ -1290,6 +1290,22 @@ async def create_message(
         is_small_model = "haiku" in clean_model.lower() or "mini" in clean_model.lower()
         if is_small_model:
             print(f"\n🔍 SMALL MODEL REQUEST ({clean_model}):")
+            
+            # Log system message if present
+            if request.system:
+                if isinstance(request.system, str):
+                    print(f"  system: {request.system[:200]}{'...' if len(request.system) > 200 else ''}")
+                elif isinstance(request.system, list):
+                    # Handle system content blocks
+                    system_text = ""
+                    for block in request.system:
+                        if hasattr(block, 'type') and block.type == "text":
+                            system_text += block.text + " "
+                        elif isinstance(block, dict) and block.get("type") == "text":
+                            system_text += block.get("text", "") + " "
+                    print(f"  system: {system_text[:200]}{'...' if len(system_text) > 200 else ''}")
+            
+            # Log conversation messages
             for i, msg in enumerate(request.messages):
                 role = msg.role
                 content = msg.content
@@ -1532,6 +1548,20 @@ async def create_message(
                     "output_tokens": anthropic_response.usage.output_tokens
                 }
             })
+
+            # Log response for small models
+            if is_small_model:
+                print(f"📝 SMALL MODEL RESPONSE ({clean_model}):")
+                for content_block in anthropic_response.content:
+                    if hasattr(content_block, 'type') and content_block.type == "text":
+                        print(f"  assistant: {content_block.text[:200]}{'...' if len(content_block.text) > 200 else ''}")
+                    elif isinstance(content_block, dict) and content_block.get("type") == "text":
+                        print(f"  assistant: {content_block.get('text', '')[:200]}{'...' if len(content_block.get('text', '')) > 200 else ''}")
+                    elif hasattr(content_block, 'type') and content_block.type == "tool_use":
+                        print(f"  assistant: [Tool Use: {content_block.name}]")
+                    elif isinstance(content_block, dict) and content_block.get("type") == "tool_use":
+                        print(f"  assistant: [Tool Use: {content_block.get('name', 'unknown')}]")
+                print()
 
             return anthropic_response
 
